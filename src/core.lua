@@ -1,4 +1,4 @@
-local utils = require "awestore.utils"
+local utils = require(tostring(...):match(".*awestore") .. (".src") .. ".utils")
 
 local derived, filtered, monitored, readable, signal, store, writable
 
@@ -13,7 +13,7 @@ function writable(value, start)
   local value = value
   local subscribers = { }
   local start, stop = start or utils.noop, nil
-  
+
   function self:set(new_value)
     if value ~= new_value then
       value = new_value
@@ -24,7 +24,7 @@ function writable(value, start)
       end
     end
   end
-  
+
   function self:subscribe(fn)
     subscribers[#subscribers + 1] = fn
     if #subscribers == 1 then
@@ -41,7 +41,7 @@ function writable(value, start)
       if #subscribers == 0 then stop(); stop = nil; end
     end
   end
-  
+
   function self:subscribe_next(fn)
     subscribers[#subscribers + 1] = fn
     if #subscribers == 1 then
@@ -57,7 +57,7 @@ function writable(value, start)
       if #subscribers == 0 then stop(); stop = nil; end
     end
   end
-  
+
   function self:subscribe_once(fn)
     local unsubscriber
     local unsubscriber = self:subscribe_next(function(value)
@@ -66,32 +66,32 @@ function writable(value, start)
     end)
     return unsubscriber
   end
-  
+
   function self:update(fn) self:set(fn(value)); end
-  
+
   function self:derive(fn) return derived(self, fn); end
-  
+
   function self:get()
     local a
     self:subscribe(function(b) a = b end)()
     return a
   end
-  
-  function self:monitor() return monitored(self); end 
-  
+
+  function self:monitor() return monitored(self); end
+
   function self:filter(fn) return filtered(self, fn); end
-  
+
   return self
 end
 
 function signal()
   local self = { [store] = true, [readable] = true, [signal] = true, }
   local subscribers = { }
-  
+
   function self:fire()
     for _, subscriber in ipairs(subscribers) do subscriber(); end
   end
-  
+
   function self:subscribe(fn)
     subscribers[#subscribers + 1] = fn
     return function()
@@ -103,7 +103,7 @@ function signal()
       end
     end
   end
-  
+
   function self:subscribe_once(fn)
     local unsubscriber
     unsubscriber = self:subscribe(function(value)
@@ -112,56 +112,56 @@ function signal()
     end)
     return unsubscriber
   end
-  
+
   function self:monitor() return monitored(self); end
-  
+
   return self
 end
 
 function readable(value, start)
   local self = { [store] = true, [readable] = true, }
   local inner = writable(value, start)
-  
+
   function self:subscribe(fn) return inner:subscribe(fn); end
-  
+
   function self:subscribe_next(fn) return inner:subscribe_next(fn); end
-  
+
   function self:subscribe_once(fn) return inner:subscribe_once(fn); end
-  
+
   function self:derive(fn) return derived(self, fn); end
-  
+
   function self:get()
     local a
     self:subscribe(function(b) a = b end)()
     return a
   end
-  
+
   function self:monitor() return monitored(self); end
-  
+
   function self:filter(fn) return filtered(self, fn); end
-  
+
   return self
 end
 
 function monitored(store_)
   local self = { [store] = true, [readable] = true, [monitored] = true }
-  
+
   if store_[signal] == true then self[signal] = true; end
-  
+
   function self:subscribe(fn) return store_:subscribe(fn); end
-  
+
   function self:subscribe_next(fn) return store_:subscribe_next(fn); end
-  
+
   function self:subscribe_once(fn) return store_:subscribe_once(fn); end
-  
+
   function self:derive(fn) return derived(self, fn); end
-  
+
   function self:get() return store_:get(); end
-  
+
   function self:monitor() return monitored(self); end
-  
+
   function self:filter(fn) return filtered(self, fn); end
-  
+
   return self
 end
 
@@ -169,9 +169,9 @@ function derived(store_, fn)
   local self = readable(nil, function(set)
     return store_:subscribe(function(value) set(fn(value)); end)
   end)
-  
+
   self[derived] = true
-  
+
   return self
 end
 
@@ -181,9 +181,9 @@ function filtered(store_, fn)
       if fn(value) then set(value); end
     end)
   end)
-  
+
   self[filtered] = true
-  
+
   return self
 end
 
@@ -196,4 +196,3 @@ return {
   store = store,
   writable = writable,
 }
-
